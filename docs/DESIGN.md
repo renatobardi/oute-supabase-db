@@ -9,9 +9,9 @@ same house pattern: one LXC per stack on `oute-server`, firewall inside the LXC,
 
 | Project | Today | Plan |
 |---|---|---|
-| financial-control | SQLite (1.4 MB) | pilot 1: own database |
-| frentes-engenharia | SQLite (123 MB) | pilot 2: own database |
-| hanko | Postgres 17 own container (~1.1 GB) | pilot 3: own database, only `HANKO_DATABASE_URL` changes |
+| financial-control | SQLite (1.4 MB) | pilot 1: own schema |
+| frentes-engenharia | SQLite (123 MB) | pilot 2: own schema |
+| hanko | Postgres 17 own container (~1.1 GB) | pilot 3: own schema, only `HANKO_DATABASE_URL` changes |
 | kubo, obo | → oute-surreal-db | out |
 | oute-agent, vaultwarden, studio | out | out (ADR-08 / isolated vault / discontinued Oute project) |
 
@@ -25,23 +25,25 @@ same house pattern: one LXC per stack on `oute-server`, firewall inside the LXC,
 - Source is an upstream snapshot (see `UPSTREAM.md`); the variant adds only `docker-compose.oute.yml`,
   `utils/init-projects.sh`, `ops/`, `docs/`.
 
-## Data model: one database per project
-Supabase's own services (Auth, Storage, Realtime, Studio) live in database `postgres` and assume one project.
-So each Oute project gets its **own database** on the same Postgres, and `postgres` stays reserved for the
-Supabase services and for **the one app that will use Auth/REST/Storage/Realtime** (not decided yet; decided when
-reading each app's code for the migration issues).
+## Data model: one schema per project, in `postgres`
+oute-supabase-db is a **shared piece**, not a project's database. All projects live in database `postgres`, one **schema** each, so Studio
+(and Auth, REST, Storage, Realtime, the pooler) see and serve all of them. A project that wants the Supabase platform (Auth, REST, Storage,
+Realtime) just uses it; none of the three current apps needs it yet.
 
 | Dimension | Convention |
 |---|---|
-| Database | `<project with _>_<env>` e.g. `financial_control_prd`. Only existing envs (`PG_PROJECTS` in `.env`) |
-| Roles | `app_<db>` owner of the database and of schema `public`; `ro_<db>` SELECT only (backup, queries). No superuser/createdb |
-| Isolation | `CONNECT` revoked from PUBLIC on each project database; a role connects only to its own database |
-| Access | Apps connect **directly** to Postgres on `10.173.117.51:5433` (override publishes `db`). The pooler (5432/6543) is tenant-bound to `postgres`, so it is not used for project databases |
-| Env vars in apps | `DATABASE_URL=postgresql://app_<db>:<pass>@10.173.117.51:5433/<db>` (hanko: `HANKO_DATABASE_URL`) |
-| Vault | `oute-supabase-db/postgres`, `oute-supabase-db/dashboard`, `oute-supabase-db/<db>/<role>` |
+| Schema | `<project with _>_<env>` e.g. `financial_control_prd`. Only existing envs (`PG_PROJECTS` in `.env`) |
+| Roles | `app_<schema>` owns the schema; `ro_<schema>` SELECT only (backup, queries). No superuser/createdb; `search_path` fixed to the schema |
+| Isolation | A role has no privilege on any other project schema, on `public`, or on Supabase schemas (`auth`, `storage`, `vault`...). It sees catalog metadata only (tested) |
+| Studio | Connects as role `postgres`, which is a member of every `app_<schema>`, so it sees and edits all project schemas |
+| Access | Apps connect to database `postgres` as their `app_<schema>` role: directly on `10.173.117.51:5433`, or through the pooler (5432 session, 6543 transaction) |
+| REST/Realtime | `PGRST_DB_SCHEMAS` stays `public,graphql_public`: a project schema is **not** exposed over REST until that project opts in (add the schema and grants for `anon`/`authenticated`) |
+| `auth.users` | Shared by every project that uses Supabase Auth (accepted: the stack is one shared platform) |
+| Env vars in apps | `DATABASE_URL=postgresql://app_<schema>:<pass>@10.173.117.51:5433/postgres` (hanko: `HANKO_DATABASE_URL`) |
+| Vault | `oute-supabase-db/postgres`, `oute-supabase-db/dashboard`, `oute-supabase-db/<schema>/<role>` |
 
-Residual: project roles can `CONNECT` to `postgres` (default PUBLIC grant, kept so Supabase services keep working)
-but have no privilege on any schema there (tested: `auth`, `storage`, `vault` denied); they only see catalog metadata.
+History: the first cut used one database per project. It was dropped (2026-10-19) because Studio only manages `postgres`, which left the
+published console blind to the project data; the roles and their passwords were kept.
 
 ## Network isolation
 Same finding as oute-surreal-db: host Docker containers reach LXC IPs; LXD ACL is unavailable on bridge NICs.
@@ -67,7 +69,7 @@ provision script (postgres, dashboard) and by `init-projects.sh` (project roles)
 
 ## Decisions (2026-10-19)
 1. Start from a **snapshot of upstream `master`** (no history, not a fork) to keep all Supabase capabilities.
-2. LXC per stack; full stack on; database per project; direct Postgres access; Studio at `db-console.oute.pro` (tailnet only), tunnel as fallback.
+2. LXC per stack; full stack on; schema per project in `postgres`; direct Postgres access; Studio at `db-console.oute.pro` (tailnet only), tunnel as fallback.
 3. Migrations of each app are tracked as issues **in each app's repo**, not here.
 4. Backup: LXC snapshot for now; policy and `pg_dump` later (open).
 
