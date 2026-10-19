@@ -1,16 +1,29 @@
-# oute-supabase-db — estado do projeto
+# oute-supabase-db — project state
 
-## Decisões (2026-10-18)
-- Repo próprio, só `docker/` + nossos arquivos (reset do fork do monorepo; histórico anterior fica no git).
-- Roda em **LXC próprio** na `lxdbr0` (padrão da casa), isolado do oute-surreal-db: sem porta no host, sem conflito de 8000.
-- Projetos: **hanko** (app próprio, já Postgres: só troca `HANKO_DATABASE_URL`), **frentes-engenharia** e **financial-control** (SQLite → Postgres).
-- Fora: oute-agent (ADR-08), vaultwarden (cofre isolado em SQLite), studio (descontinuado).
-- Pilotos, nesta ordem: financial-control (1,4 MB) → frentes-engenharia (123 MB) → hanko.
-- Backup: snapshot do LXC (política na fase final).
+Two isolated stacks on `oute-server`, each in its own LXC on `lxdbr0` (house pattern):
 
-## Pendente
-- Assessment de RAM/disco para o LXC (stack ~3–4 GB; host tem ~13 GB livres).
-- Decidir quais serviços ligar (logs/Logflare, Edge Functions, Storage) — começar enxuto.
-- Adaptar compose ao nosso gosto (`.env.example`, portas, limites, versões fixadas).
-- Esquema de roles/databases por projeto no Postgres (um schema ou database por projeto).
-- `docker/update.sh` aponta para o upstream: decidir se mantém ou remove.
+| Stack | Repo | Projects |
+|---|---|---|
+| oute-surreal-db | `renatobardi/oute-surreal-db` | kubo, obo |
+| **oute-supabase-db** | this | financial-control, frentes-engenharia, hanko |
+
+Out of scope: oute-agent (ADR-08), vaultwarden (isolated SQLite), studio (discontinued Oute project; not Supabase Studio).
+
+## Decisions (2026-10-19)
+- Repo = snapshot of upstream `master` (no history, not a fork; recreated on GitHub), all Supabase capabilities kept. Base commit in `UPSTREAM.md`.
+- Full stack on (Studio, Auth, REST, Realtime, Storage, Functions, Pooler, Logs). One database per project; `postgres` reserved for Supabase services and for the one app that will use Auth/REST/Storage (open).
+- Details, isolation and conventions: `docs/DESIGN.md`. Runbooks: `docs/OPERATIONS.md`.
+- App migrations (SQLite → Postgres) are issues **in each app's repo**, written after the server is up and after reading each app's code.
+- Pilots: financial-control → frentes-engenharia → hanko (only `HANKO_DATABASE_URL`).
+
+## Open
+- Which app owns database `postgres` (and uses Auth/REST/Storage/Realtime).
+- Backup policy (LXC snapshot now; `pg_dump` schedule later).
+- RAM check of the full stack after first boot (LXC limit 6 GiB; logs override can be dropped).
+
+## Phases
+1. Repo from upstream snapshot ✔
+2. Provisioning code + docs (`ops/`, `docker/utils/init-projects.sh`, `docs/`) — branch `feat/provision-lxc`
+3. Apply on the server (LXC `10.173.117.51`), verify isolation, snapshot
+4. Issues in each app's repo (code read first)
+5. Pilot migrations, then backup policy
