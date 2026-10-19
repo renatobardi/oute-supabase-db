@@ -45,11 +45,21 @@ but have no privilege on any schema there (tested: `auth`, `storage`, `vault` de
 
 ## Network isolation
 Same finding as oute-surreal-db: host Docker containers reach LXC IPs; LXD ACL is unavailable on bridge NICs.
-- nft table `inet oute_pgdb` (hook forward) inside the LXC: only client LXC IPs reach ports `5432, 5433, 6543, 8000`.
+- nft table `inet oute_pgdb` (hook forward) inside the LXC: only client LXC IPs reach ports `5432, 5433, 6543` and `8000`.
 - Clients today: `10.173.117.42` (financial-control-prd), `.41` (frentes-engenharia-prd), `.43` (hanko-prd).
-- `provision_lxc.sh` tests the negative on every run (clients reach; vaultwarden and host Docker networks blocked; exit 2 if anything leaks).
-- Admin (Studio, psql) never uses the lxdbr0 IP: LXD proxy devices bind the **host loopback** (`18000`→8000, `15433`→5433)
-  and `ops/admin_tunnel.sh` forwards them to the Mac over ssh. `SUPABASE_PUBLIC_URL=http://localhost:8000` accordingly.
+- **Exception:** the host (`10.173.117.1`) may reach `8000` only, so the host nginx can publish Studio. Postgres ports stay closed to it.
+  Host Docker containers are masqueraded as the same IP, so they can also reach the gateway on `8000` (dashboard login and API keys
+  are still required; they cannot reach any project database). Tracked for a uniform fix in renatobardi/lab#285.
+- `provision_lxc.sh` tests on every run: clients reach 5433; vaultwarden is blocked on 5433 and 8000; host Docker networks are blocked on 5433;
+  the host reaches the gateway; exit 2 if anything leaks.
+
+## Access
+- **Studio:** `https://db-console.oute.pro`, tailnet only (`100.66.254.24:443`, host nginx vhost + certbot, lab#286, ADR-0001).
+  The vhost proxies the whole Envoy gateway, so `/rest/v1`, `/auth/v1`, `/storage/v1`, `/realtime/v1` and `/pg/` share the name (API keys required).
+  Vhost, deploy script and tests live in `renatobardi/lab` (`servers/oute-server/nginx/db-console.oute.pro`).
+- `SUPABASE_PUBLIC_URL` / `API_EXTERNAL_URL` = `https://db-console.oute.pro` (Envoy CORS and Studio links use it).
+- **Fallback / psql from the Mac:** LXD proxy devices bind the host loopback (`18000`→8000, `15433`→5433);
+  `ops/admin_tunnel.sh` forwards them over ssh (`localhost:8000` is still allowed by CORS).
 
 ## Secrets
 Generated inside the LXC (`utils/generate-keys.sh`, `add-new-auth-keys.sh`); `.env` is `600`, never in git. Shown once by the
@@ -57,7 +67,7 @@ provision script (postgres, dashboard) and by `init-projects.sh` (project roles)
 
 ## Decisions (2026-10-19)
 1. Start from a **snapshot of upstream `master`** (no history, not a fork) to keep all Supabase capabilities.
-2. LXC per stack; full stack on; database per project; direct Postgres access; admin via tunnel.
+2. LXC per stack; full stack on; database per project; direct Postgres access; Studio at `db-console.oute.pro` (tailnet only), tunnel as fallback.
 3. Migrations of each app are tracked as issues **in each app's repo**, not here.
 4. Backup: LXC snapshot for now; policy and `pg_dump` later (open).
 

@@ -20,9 +20,11 @@ ssh oute-server 'lxc exec oute-supabase-db -- docker compose -f /opt/oute-supaba
 ssh oute-server 'lxc exec oute-supabase-db -- nft list chain inet oute_pgdb pgdb_forward'   # drop counter
 ```
 
-## 3. Studio / psql from the Mac
-`./ops/admin_tunnel.sh` then open http://localhost:8000 (user/password `DASHBOARD_*`), or
-`psql "postgresql://postgres:<POSTGRES_PASSWORD>@localhost:5433/postgres"`.
+## 3. Studio / psql
+Studio: https://db-console.oute.pro (tailnet only; user `supabase`, password `DASHBOARD_PASSWORD` from the vault).
+It shows database `postgres` only; project databases are reached with `psql`.
+From the Mac, `./ops/admin_tunnel.sh` gives Studio on http://localhost:8000 and Postgres on `localhost:5433`
+(`psql "postgresql://postgres:<POSTGRES_PASSWORD>@localhost:5433/postgres"`). It is the fallback if the vhost is down.
 
 ## 4. Connect an app
 `DATABASE_URL=postgresql://app_<db>:<pass>@10.173.117.51:5433/<db>`. The app's LXC **must be in the client list** (section 5),
