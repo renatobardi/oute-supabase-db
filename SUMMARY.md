@@ -12,7 +12,7 @@ Out of scope: oute-agent (ADR-08), vaultwarden (isolated SQLite), studio (discon
 ## Decisions (2026-10-19)
 - Repo = snapshot of upstream `master` (no history, not a fork; recreated on GitHub), all Supabase capabilities kept. Base commit in `UPSTREAM.md`.
 - Full stack on (Studio, Auth, REST, Realtime, Storage, Functions, Pooler, Logs). One **schema per project** in database `postgres` (shared platform: Studio sees all; Auth/REST/Storage available to any project that opts in).
-- Studio published at `https://db-console.oute.pro`, tailnet only (vhost in `renatobardi/lab`, issue lab#286); host allowed on :8000 only (exception tracked in lab#285).
+- Studio published at `https://db-console.oute.pro`, tailnet only (vhost in `renatobardi/lab`, issue lab#286); host allowed on :8000 only; host Docker containers are blocked towards every LXC by the host forward rule (lab ADR 0006, #285).
 - Details, isolation and conventions: `docs/DESIGN.md`. Runbooks: `docs/OPERATIONS.md`.
 - App migrations (SQLite → Postgres) are issues **in each app's repo**, written after the server is up and after reading each app's code.
 - Pilots: financial-control → frentes-engenharia → hanko (only `HANKO_DATABASE_URL`).
