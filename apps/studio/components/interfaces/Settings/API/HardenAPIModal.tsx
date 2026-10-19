@@ -1,0 +1,264 @@
+import { CheckIcon } from 'lucide-react'
+import { toast } from 'sonner'
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogSection,
+  DialogSectionSeparator,
+  DialogTitle,
+  WarningIcon,
+} from 'ui'
+import { CodeBlock } from 'ui-patterns/CodeBlock'
+import {
+  DialogDisclosure,
+  DialogDisclosureContent,
+  DialogDisclosureTrigger,
+} from 'ui-patterns/DialogDisclosure'
+
+import { ButtonTooltip } from '@/components/ui/ButtonTooltip'
+import { DocsButton } from '@/components/ui/DocsButton'
+import InformationBox from '@/components/ui/InformationBox'
+import { useCreateAndExposeAPISchemaMutation } from '@/data/api-settings/create-and-expose-api-schema-mutation'
+import { useProjectPostgrestConfigQuery } from '@/data/config/project-postgrest-config-query'
+import { useProjectPostgrestConfigUpdateMutation } from '@/data/config/project-postgrest-config-update-mutation'
+import { useSchemasQuery } from '@/data/database/schemas-query'
+import { useSelectedProjectQuery } from '@/hooks/misc/useSelectedProject'
+import { DOCS_URL } from '@/lib/constants'
+
+interface HardenAPIModalProps {
+  visible: boolean
+  onClose: () => void
+}
+
+export const HardenAPIModal = ({ visible, onClose }: HardenAPIModalProps) => {
+  const { data: project } = useSelectedProjectQuery()
+
+  const { data: schemas } = useSchemasQuery({
+    projectRef: project?.ref,
+    connectionString: project?.connectionString,
+  })
+  const { data: config } = useProjectPostgrestConfigQuery({ projectRef: project?.ref })
+
+  const hasAPISchema = (schemas ?? []).find((schema) => schema.name === 'api')
+  const exposedSchemas = config?.db_schema.split(',').map((x) => x.trim()) ?? []
+  const isAPISchemaExposed = exposedSchemas.includes('api')
+  const isPublicSchemaExposed = exposedSchemas.includes('public')
+
+  const { mutate: createAndExposeAPISchema, isPending: isCreatingAPISchema } =
+    useCreateAndExposeAPISchemaMutation({
+      onSuccess: () => {
+        toast.success(`Successfully created api schema and exposed via Data API`)
+      },
+    })
+
+  const { mutate: updatePostgrestConfig, isPending: isUpdatingConfig } =
+    useProjectPostgrestConfigUpdateMutation({
+      onSuccess: () => {
+        toast.success('Success removed public schema from exposed schemas')
+      },
+    })
+
+  const onSelectCreateAndExposeAPISchema = () => {
+    if (project === undefined) return console.error('Project is required')
+    if (config === undefined) return console.error('Postgrest config is required')
+    createAndExposeAPISchema({
+      projectRef: project?.ref,
+      connectionString: project?.connectionString,
+      existingPostgrestConfig: {
+        max_rows: config.max_rows,
+        db_pool: config.db_pool,
+        db_schema: config.db_schema,
+        db_extra_search_path: config?.db_extra_search_path,
+      },
+    })
+  }
+
+  const onSelectRemovePublicSchema = () => {
+    if (project === undefined) return console.error('Project is required')
+    if (config === undefined) return console.error('Postgrest config is required')
+
+    const updatedDbExtraSearchPath = config.db_extra_search_path
+      .split(',')
+      .map((x) => x.trim())
+      .filter((x) => x !== 'public')
+      .join(', ')
+    const updatedDbSchema = config.db_schema
+      .split(',')
+      .map((x) => x.trim())
+      .filter((x) => x !== 'public')
+      .join(', ')
+    updatePostgrestConfig({
+      projectRef: project.ref,
+      maxRows: config.max_rows,
+      dbPool: config.db_pool,
+      dbSchema: updatedDbSchema,
+      dbExtraSearchPath: updatedDbExtraSearchPath,
+    })
+  }
+
+  return (
+    <Dialog open={visible} onOpenChange={onClose}>
+      <DialogContent size="large">
+        <DialogHeader>
+          <DialogTitle>Switch the default API schema</DialogTitle>
+          <DialogDescription>
+            Expose a custom schema instead of the <code className="text-code-inline">public</code>{' '}
+            schema
+          </DialogDescription>
+        </DialogHeader>
+
+        <DialogSectionSeparator />
+
+        <DialogSection className="text-sm text-foreground-light">
+          <p>
+            By default, the <code className="text-code-inline">public</code> schema is used to
+            generate API routes. In some cases, it's better to use a custom schema. This is
+            important if you use tools that generate tables in the{' '}
+            <code className="text-code-inline">public</code> schema to{' '}
+            <span className="text-primary">prevent accidental exposure of data</span>.
+          </p>
+          <DocsButton
+            abbrev={false}
+            className="w-min mt-4"
+            href={`${DOCS_URL}/guides/api/using-custom-schemas`}
+          />
+        </DialogSection>
+
+        <DialogSectionSeparator />
+
+        <DialogDisclosure>
+          <DialogDisclosureTrigger
+            className="py-4 px-5"
+            icon={
+              hasAPISchema && isAPISchemaExposed ? (
+                <CheckIcon size={16} className="text-primary" />
+              ) : undefined
+            }
+          >
+            1. Create a custom <code className="text-code-inline">api</code> schema and expose it
+          </DialogDisclosureTrigger>
+          <DialogDisclosureContent className="text-sm text-foreground-light flex flex-col gap-y-4">
+            <p className="mx-5">
+              Click the button below to create a new schema named{' '}
+              <code className="text-code-inline">api</code> and grant the{' '}
+              <code className="text-code-inline">anon</code> and{' '}
+              <code className="text-code-inline">authenticated</code> roles usage privileges on this
+              schema. This schema will thereafter also be exposed to the Data API.
+            </p>
+
+            <div className="px-5">
+              <InformationBox
+                title="How is the schema created?"
+                description={
+                  <div className="flex flex-col gap-y-2">
+                    <p>
+                      The following query will be run to create the{' '}
+                      <code className="text-code-inline">api</code> schema , as well as to grant the
+                      necessary privileges to the respective roles
+                    </p>
+                    <CodeBlock
+                      language="sql"
+                      className="p-1 language-bash prose dark:prose-dark max-w-[68.3ch]"
+                    >
+                      {`create schema if not exists api;\ngrant usage on schema api to anon, authenticated;`}
+                    </CodeBlock>
+                  </div>
+                }
+              />
+            </div>
+
+            <ButtonTooltip
+              variant="primary"
+              className="w-min mx-5"
+              onClick={onSelectCreateAndExposeAPISchema}
+              disabled={hasAPISchema && isAPISchemaExposed}
+              loading={isCreatingAPISchema}
+              tooltip={{
+                content: {
+                  side: 'right',
+                  text:
+                    hasAPISchema && isAPISchemaExposed
+                      ? 'Schema has already been created and exposed'
+                      : undefined,
+                },
+              }}
+            >
+              Create and expose schema to Data API
+            </ButtonTooltip>
+
+            <div className="flex flex-col gap-y-4 px-5 pb-4">
+              <p>
+                Under these new settings, the <code className="text-code-inline">anon</code> and{' '}
+                <code className="text-code-inline">authenticated</code> roles can execute functions
+                defined in the <code className="text-code-inline">api</code> schema, but they have
+                no automatic permissions on any tables. On a table-by-table basis, you can grant
+                them permissions by running the following command:
+              </p>
+              <CodeBlock
+                language="sql"
+                className="p-1 language-bash prose dark:prose-dark max-w-[68.3ch]"
+              >
+                {`grant select on table api.<your_table> to anon;\ngrant select, insert, update, delete on table api.<your_table> to authenticated;`}
+              </CodeBlock>
+            </div>
+          </DialogDisclosureContent>
+        </DialogDisclosure>
+
+        <DialogSectionSeparator />
+
+        <DialogDisclosure>
+          <DialogDisclosureTrigger
+            className="py-4 px-5"
+            icon={
+              !isPublicSchemaExposed ? <CheckIcon size={16} className="text-primary" /> : undefined
+            }
+          >
+            2. Remove the <code className="text-code-inline">public</code> schema from the exposed
+            schemas
+          </DialogDisclosureTrigger>
+          <DialogDisclosureContent className="text-sm text-foreground-light">
+            <div className="px-5 pb-4 flex flex-col gap-y-4">
+              <Alert variant="warning">
+                <WarningIcon />
+                <AlertTitle className="text-foreground">
+                  Ensure that your app is no longer using the{' '}
+                  <code className="text-code-inline">public</code> schema
+                </AlertTitle>
+                <AlertDescription>
+                  The <code className="text-code-inline">public</code> schema will not be accessible
+                  via the API once its not exposed. You should be using the{' '}
+                  <code className="text-code-inline">api</code> schema instead.
+                </AlertDescription>
+              </Alert>
+              <p>
+                Click the button below to remove the{' '}
+                <code className="text-code-inline">public</code> schema from both Exposed schemas
+                and Extra search path in your API configuration.
+              </p>
+              <ButtonTooltip
+                variant="primary"
+                className="w-min"
+                disabled={!isPublicSchemaExposed}
+                loading={isUpdatingConfig}
+                tooltip={{
+                  content: {
+                    side: 'right',
+                    text: !isPublicSchemaExposed ? 'Public schema no longer exposed' : undefined,
+                  },
+                }}
+                onClick={onSelectRemovePublicSchema}
+              >
+                Remove public schema from exposed schemas
+              </ButtonTooltip>
+            </div>
+          </DialogDisclosureContent>
+        </DialogDisclosure>
+      </DialogContent>
+    </Dialog>
+  )
+}

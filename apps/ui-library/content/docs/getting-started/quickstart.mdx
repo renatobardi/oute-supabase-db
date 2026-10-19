@@ -1,0 +1,452 @@
+---
+title: Quickstart
+description: Create an app, connect Supabase, and install your first library block
+---
+
+<FrameworkQuickstart>
+
+<FrameworkQuickstartTab value="nextjs">
+
+## Next.js
+
+<QuickstartStep number="1">
+
+### Create the app
+
+Create a [Next.js project](https://ui.shadcn.com/docs/installation/next) with Tailwind CSS, import aliases, and shadcn/ui configured. Choose npm when prompted for a package manager.
+
+```bash
+npx shadcn@latest init --template next --name my-app --base radix
+cd my-app
+```
+
+Already have a project? Run `npx shadcn@latest init` from its root if it does not have a `components.json` file.
+
+</QuickstartStep>
+
+<QuickstartStep number="2">
+
+### Install the Supabase client
+
+Add the [Next.js client](/library/docs/nextjs/client). The installer adds the client files and Supabase dependencies. If you already have a client, keep your existing setup and check that the block imports match its location.
+
+```bash
+npx shadcn@latest add https://supabase.com/library/r/supabase-client-nextjs.json
+```
+
+</QuickstartStep>
+
+<QuickstartStep number="3">
+
+### Configure Supabase
+
+Create `.env.local` in the project root. Add your project URL and publishable key from the [Connect dialog](https://supabase.com/dashboard/project/_?showConnect=true).
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your-project-url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+</QuickstartStep>
+
+<QuickstartStep number="4">
+
+### Add your first block
+
+Install the password authentication block from the project root. This adds the authentication files and their UI dependencies.
+
+```bash
+npx shadcn@latest add https://supabase.com/library/r/password-based-auth-nextjs.json
+```
+
+Follow the [Next.js authentication setup](/library/docs/nextjs/password-based-auth#usage) to connect the routes, configure redirect URLs, and finish the email flow before testing sign-up.
+
+</QuickstartStep>
+
+<QuickstartStep number="5">
+
+### Start developing
+
+Run the development server and open the local URL printed in your terminal. Restart the server after changing environment variables.
+
+```bash
+npm run dev
+```
+
+</QuickstartStep>
+
+</FrameworkQuickstartTab>
+
+<FrameworkQuickstartTab value="react-router">
+
+## React Router
+
+<QuickstartStep number="1">
+
+### Create the app
+
+Create a [React Router project](https://ui.shadcn.com/docs/installation/react-router) with Tailwind CSS, import aliases, and shadcn/ui configured. Choose npm when prompted for a package manager.
+
+```bash
+npx shadcn@latest init --template react-router --name my-app --base radix
+cd my-app
+```
+
+Already have a project? Run `npx shadcn@latest init` from its root if it does not have a `components.json` file.
+
+</QuickstartStep>
+
+<QuickstartStep number="2">
+
+### Install the Supabase client
+
+Add the [React Router client](/library/docs/react-router/client). The installer adds the client files and Supabase dependencies. If you already have a client, keep your existing setup and check that the block imports match its location.
+
+```bash
+npx shadcn@latest add https://supabase.com/library/r/supabase-client-react-router.json
+```
+
+</QuickstartStep>
+
+<QuickstartStep number="3">
+
+### Configure Supabase
+
+Create `.env` in the project root. Add your project URL and publishable key from the [Connect dialog](https://supabase.com/dashboard/project/_?showConnect=true).
+
+```env
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+</QuickstartStep>
+
+<QuickstartStep number="4">
+
+### Add your first block
+
+Install the password authentication block from the project root. This adds the authentication files and their UI dependencies.
+
+```bash
+npx shadcn@latest add https://supabase.com/library/r/password-based-auth-react-router.json
+```
+
+Follow the [React Router authentication setup](/library/docs/react-router/password-based-auth#usage) to connect the routes, configure redirect URLs, and finish the email flow before testing sign-up.
+
+</QuickstartStep>
+
+<QuickstartStep number="5">
+
+### Start developing
+
+Run the development server and open the local URL printed in your terminal. Restart the server after changing environment variables.
+
+```bash
+npm run dev
+```
+
+</QuickstartStep>
+
+</FrameworkQuickstartTab>
+
+<FrameworkQuickstartTab value="tanstack">
+
+## TanStack Start
+
+<QuickstartStep number="1">
+
+### Create the app
+
+Create a [TanStack Start project](https://ui.shadcn.com/docs/installation/tanstack) with Tailwind CSS, import aliases, and shadcn/ui configured. Choose npm when prompted for a package manager.
+
+```bash
+npx shadcn@latest init --template start --name my-app --base radix
+cd my-app
+```
+
+Already have a project? Run `npx shadcn@latest init` from its root if it does not have a `components.json` file.
+
+</QuickstartStep>
+
+<QuickstartStep number="2">
+
+### Install the Supabase client
+
+Add the [TanStack Start client](/library/docs/tanstack/client). The installer adds the client files and Supabase dependencies. If you already have a client, keep your existing setup and check that the block imports match its location.
+
+```bash
+npx shadcn@latest add https://supabase.com/library/r/supabase-client-tanstack.json
+```
+
+</QuickstartStep>
+
+<QuickstartStep number="3">
+
+### Configure Supabase
+
+Create `.env` in the project root. Add your project URL and publishable key from the [Connect dialog](https://supabase.com/dashboard/project/_?showConnect=true).
+
+```env
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+</QuickstartStep>
+
+<QuickstartStep number="4">
+
+### Add your first block
+
+Install the password authentication block from the project root. This adds the authentication files and their UI dependencies.
+
+```bash
+npx shadcn@latest add https://supabase.com/library/r/password-based-auth-tanstack.json
+```
+
+Follow the [TanStack Start authentication setup](/library/docs/tanstack/password-based-auth#usage) to connect the routes, configure redirect URLs, and finish the email flow before testing sign-up.
+
+</QuickstartStep>
+
+<QuickstartStep number="5">
+
+### Start developing
+
+Run the development server and open the local URL printed in your terminal. Restart the server after changing environment variables.
+
+```bash
+npm run dev
+```
+
+</QuickstartStep>
+
+Check the [TanStack Start guide](https://tanstack.com/start/latest/docs/framework/react/getting-started) for framework setup changes if the generated routes differ from the block examples.
+
+</FrameworkQuickstartTab>
+
+<FrameworkQuickstartTab value="react">
+
+## React SPA
+
+<QuickstartStep number="1">
+
+### Create the app
+
+Create a [React SPA project](https://ui.shadcn.com/docs/installation/vite) with Tailwind CSS, import aliases, and shadcn/ui configured. Choose npm when prompted for a package manager.
+
+```bash
+npx shadcn@latest init --template vite --name my-app --base radix
+cd my-app
+```
+
+Already have a project? Run `npx shadcn@latest init` from its root if it does not have a `components.json` file.
+
+</QuickstartStep>
+
+<QuickstartStep number="2">
+
+### Install the Supabase client
+
+Add the [React SPA client](/library/docs/react/client). The installer adds the client files and Supabase dependencies. If you already have a client, keep your existing setup and check that the block imports match its location.
+
+```bash
+npx shadcn@latest add https://supabase.com/library/r/supabase-client-react.json
+```
+
+</QuickstartStep>
+
+<QuickstartStep number="3">
+
+### Configure Supabase
+
+Create `.env.local` in the project root. Add your project URL and publishable key from the [Connect dialog](https://supabase.com/dashboard/project/_?showConnect=true).
+
+```env
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+</QuickstartStep>
+
+<QuickstartStep number="4">
+
+### Add your first block
+
+Install the password authentication block from the project root. This adds the authentication files and their UI dependencies.
+
+```bash
+npx shadcn@latest add https://supabase.com/library/r/password-based-auth-react.json
+```
+
+Follow the [React SPA authentication setup](/library/docs/react/password-based-auth#usage) to connect the routes, configure redirect URLs, and finish the email flow before testing sign-up.
+
+</QuickstartStep>
+
+<QuickstartStep number="5">
+
+### Start developing
+
+Run the development server and open the local URL printed in your terminal. Restart the server after changing environment variables.
+
+```bash
+npm run dev
+```
+
+</QuickstartStep>
+
+</FrameworkQuickstartTab>
+
+<FrameworkQuickstartTab value="vue">
+
+## Vue
+
+<QuickstartStep number="1">
+
+### Create the app
+
+Create a [Vue project](https://www.shadcn-vue.com/docs/installation/vite) with Tailwind CSS, import aliases, and shadcn-vue configured. Choose npm when prompted for a package manager.
+
+```bash
+npx shadcn-vue@latest init --template vite --name my-app
+cd my-app
+```
+
+Already have a project? Run `npx shadcn-vue@latest init` from its root if it does not have a `components.json` file.
+
+</QuickstartStep>
+
+<QuickstartStep number="2">
+
+### Install the Supabase client
+
+Add the [Vue client](/library/docs/vue/client). The installer adds the client files and Supabase dependencies. If you already have a client, keep your existing setup and check that the block imports match its location.
+
+```bash
+npx shadcn-vue@latest add https://supabase.com/library/r/supabase-client-vue.json
+```
+
+</QuickstartStep>
+
+<QuickstartStep number="3">
+
+### Configure Supabase
+
+Create `.env.local` in the project root. Add your project URL and publishable key from the [Connect dialog](https://supabase.com/dashboard/project/_?showConnect=true).
+
+```env
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+</QuickstartStep>
+
+<QuickstartStep number="4">
+
+### Add your first block
+
+Install the password authentication block from the project root. This adds the authentication files and their UI dependencies.
+
+```bash
+npx shadcn-vue@latest add https://supabase.com/library/r/password-based-auth-vue.json
+```
+
+Follow the [Vue authentication setup](/library/docs/vue/password-based-auth#usage) to connect the routes, configure redirect URLs, and finish the email flow before testing sign-up.
+
+</QuickstartStep>
+
+<QuickstartStep number="5">
+
+### Start developing
+
+Run the development server and open the local URL printed in your terminal. Restart the server after changing environment variables.
+
+```bash
+npm run dev
+```
+
+</QuickstartStep>
+
+</FrameworkQuickstartTab>
+
+<FrameworkQuickstartTab value="nuxtjs">
+
+## Nuxt.js
+
+<QuickstartStep number="1">
+
+### Create the app
+
+Create a [Nuxt.js project](https://www.shadcn-vue.com/docs/installation/nuxt) with Tailwind CSS, import aliases, and shadcn-vue configured. Choose npm when prompted for a package manager.
+
+```bash
+npx shadcn-vue@latest init --template nuxt --name my-app
+cd my-app
+```
+
+Already have a project? Run `npx shadcn-vue@latest init` from its root if it does not have a `components.json` file.
+
+</QuickstartStep>
+
+<QuickstartStep number="2">
+
+### Install the Supabase client
+
+Add the [Nuxt.js client](/library/docs/nuxtjs/client). The installer adds the client files and Supabase dependencies. If you already have a client, keep your existing setup and check that the block imports match its location.
+
+```bash
+npx shadcn-vue@latest add https://supabase.com/library/r/supabase-client-nuxtjs.json
+```
+
+</QuickstartStep>
+
+<QuickstartStep number="3">
+
+### Configure Supabase
+
+Create `.env` in the project root. Add your project URL and publishable key from the [Connect dialog](https://supabase.com/dashboard/project/_?showConnect=true).
+
+```env
+NUXT_PUBLIC_SUPABASE_URL=your-project-url
+NUXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+</QuickstartStep>
+
+<QuickstartStep number="4">
+
+### Add your first block
+
+Install the password authentication block from the project root. This adds the authentication files and their UI dependencies.
+
+```bash
+npx shadcn-vue@latest add https://supabase.com/library/r/password-based-auth-nuxtjs.json
+```
+
+Follow the [Nuxt.js authentication setup](/library/docs/nuxtjs/password-based-auth#usage) to connect the routes, configure redirect URLs, and finish the email flow before testing sign-up.
+
+</QuickstartStep>
+
+<QuickstartStep number="5">
+
+### Start developing
+
+Run the development server and open the local URL printed in your terminal. Restart the server after changing environment variables.
+
+```bash
+npm run dev
+```
+
+</QuickstartStep>
+
+</FrameworkQuickstartTab>
+
+</FrameworkQuickstart>
+
+## Explore the library
+
+Browse [blocks](/library) by category to find your next component. Each block page includes installation commands, source files, and framework-specific usage instructions.
+
+## Troubleshooting
+
+Run install commands from the directory containing `components.json`. If an import cannot be resolved, check its aliases and the paths in your TypeScript configuration. For an existing project, use the setup guide linked in your framework tab to check Tailwind CSS and alias configuration before reinitializing shadcn/ui.
+
+For framework-specific questions, see the [FAQs](/library/docs/getting-started/faq).

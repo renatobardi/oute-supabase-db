@@ -1,0 +1,237 @@
+---
+title: Sidebar
+description: A composable, themeable sidebar for app navigation.
+component: true
+source:
+  shadcn: true
+---
+
+<ComponentPreview name="sidebar-demo" peekCode wide className="p-0" padded={false} />
+
+Composable sidebar primitives for app chrome. The implementation lives in
+`packages/ui` and is used by Studio. Import from `'ui'`.
+
+## Usage
+
+```tsx
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarHeader,
+  SidebarProvider,
+  SidebarTrigger,
+} from 'ui'
+```
+
+```tsx
+export function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarProvider>
+      <AppSidebar />
+      <main>
+        <SidebarTrigger />
+        {children}
+      </main>
+    </SidebarProvider>
+  )
+}
+```
+
+```tsx
+export function AppSidebar() {
+  return (
+    <Sidebar>
+      <SidebarHeader />
+      <SidebarContent>
+        <SidebarGroup />
+      </SidebarContent>
+      <SidebarFooter />
+    </Sidebar>
+  )
+}
+```
+
+## Structure
+
+| Part                              | Role                                                 |
+| --------------------------------- | ---------------------------------------------------- |
+| `SidebarProvider`                 | Open / collapsed state and keyboard shortcut         |
+| `Sidebar`                         | Collapsible shell (`side`, `variant`, `collapsible`) |
+| `SidebarHeader` / `SidebarFooter` | Sticky top and bottom regions                        |
+| `SidebarContent`                  | Scrollable middle                                    |
+| `SidebarGroup`                    | Section inside content                               |
+| `SidebarMenu` and friends         | Nav items, actions, badges, submenus                 |
+| `SidebarTrigger` / `SidebarRail`  | Toggle controls                                      |
+
+## Theming
+
+Sidebar colours use **full colour** CSS variables (aliases into the semantic
+system), not classic shadcn HSL channel lists. Do not wrap them in `hsl()`.
+
+Shared defaults (also in `packages/ui` compat CSS, matching Studio):
+
+```css
+:root {
+  --sidebar-background: var(--background-dash-sidebar);
+  --sidebar-foreground: var(--foreground-default);
+  --sidebar-primary: var(--foreground-default);
+  --sidebar-primary-foreground: var(--warning);
+  --sidebar-accent: var(--background-selection);
+  --sidebar-accent-foreground: var(--foreground-default);
+  --sidebar-border: var(--border-default);
+  --sidebar-ring: var(--ring);
+}
+```
+
+Apps that import `config/tailwind.config.css` already map these to
+`--color-sidebar*` in `packages/config/css/theme.css`, so utilities like
+`bg-sidebar` and `text-sidebar-foreground` work without a local Tailwind colour
+entry.
+
+Override any `--sidebar-*` token when the sidebar should diverge from the main
+app surface.
+
+## SidebarProvider
+
+Always wrap the sidebar and its trigger in `SidebarProvider`.
+
+| Prop           | Type                      | Description                     |
+| -------------- | ------------------------- | ------------------------------- |
+| `defaultOpen`  | `boolean`                 | Uncontrolled initial open state |
+| `open`         | `boolean`                 | Controlled open state           |
+| `onOpenChange` | `(open: boolean) => void` | Controlled open setter          |
+
+### Width
+
+Override desktop width with `--sidebar-width` on the provider (also used for
+layout spacing):
+
+```tsx
+<SidebarProvider
+  style={
+    {
+      '--sidebar-width': '20rem',
+    } as React.CSSProperties
+  }
+>
+  <Sidebar />
+</SidebarProvider>
+```
+
+Defaults live as `SIDEBAR_WIDTH` / `SIDEBAR_WIDTH_ICON` in
+`packages/ui/src/components/shadcn/ui/sidebar.tsx`. On mobile, the sheet sets
+`--sidebar-width` from the hard-coded `SIDEBAR_WIDTH_MOBILE` constant, so there
+is no separate CSS variable to override mobile width today.
+
+### Persisted state
+
+`SidebarProvider` writes open state to a cookie (`SIDEBAR_COOKIE_NAME`, default
+`sidebar:state` in this repo). For Next.js App Router you can seed
+`defaultOpen` from that cookie on the server.
+
+## Sidebar
+
+| Prop          | Type                                 | Description        |
+| ------------- | ------------------------------------ | ------------------ |
+| `side`        | `'left' \| 'right'`                  | Which edge         |
+| `variant`     | `'sidebar' \| 'floating' \| 'inset'` | Visual treatment   |
+| `collapsible` | `'offcanvas' \| 'icon' \| 'none'`    | Collapse behaviour |
+
+| `collapsible` | Behaviour          |
+| ------------- | ------------------ |
+| `offcanvas`   | Slides off-canvas  |
+| `icon`        | Collapses to icons |
+| `none`        | Always expanded    |
+
+For `variant="inset"`, wrap main content in `SidebarInset`.
+
+```tsx
+<SidebarProvider>
+  <Sidebar variant="inset" />
+  <SidebarInset>
+    <main>{children}</main>
+  </SidebarInset>
+</SidebarProvider>
+```
+
+## useSidebar
+
+```tsx
+import { useSidebar } from 'ui'
+
+export function CustomTrigger() {
+  const { toggleSidebar } = useSidebar()
+  return <button onClick={toggleSidebar}>Toggle Sidebar</button>
+}
+```
+
+Must be used under `SidebarProvider`.
+
+## Menu building blocks
+
+Typical nav group:
+
+```tsx
+<SidebarGroup>
+  <SidebarGroupLabel>Application</SidebarGroupLabel>
+  <SidebarGroupContent>
+    <SidebarMenu>
+      {items.map((item) => (
+        <SidebarMenuItem key={item.title}>
+          <SidebarMenuButton asChild>
+            <a href={item.url}>
+              <item.icon />
+              <span>{item.title}</span>
+            </a>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  </SidebarGroupContent>
+</SidebarGroup>
+```
+
+Also available: `SidebarMenuAction`, `SidebarMenuBadge`, `SidebarMenuSkeleton`,
+`SidebarMenuSub` / `SidebarMenuSubButton`, `SidebarGroupAction`,
+`SidebarSeparator`, `SidebarRail`.
+
+## Controlled sidebar
+
+```tsx
+export function AppSidebar() {
+  const [open, setOpen] = React.useState(true)
+
+  return (
+    <SidebarProvider open={open} onOpenChange={setOpen}>
+      <Sidebar />
+    </SidebarProvider>
+  )
+}
+```
+
+## Styling with state
+
+Hide a group when the sidebar is icon-collapsed:
+
+```tsx
+<Sidebar collapsible="icon">
+  <SidebarContent>
+    <SidebarGroup className="group-data-[collapsible=icon]:hidden" />
+  </SidebarContent>
+</Sidebar>
+```
+
+Keep a menu action visible when its button is active:
+
+```tsx
+<SidebarMenuItem>
+  <SidebarMenuButton />
+  <SidebarMenuAction className="peer-data-[active=true]/menu-button:opacity-100" />
+</SidebarMenuItem>
+```
+
+## Source
+
+`packages/ui/src/components/shadcn/ui/sidebar.tsx`
