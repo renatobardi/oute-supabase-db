@@ -51,3 +51,7 @@ ssh oute-server 'lxc snapshot oute-supabase-db <name>'
 ssh oute-server 'lxc exec oute-supabase-db -- docker exec supabase-db pg_dump -U supabase_admin -Fc -n <schema> postgres' > <schema>.dump
 ```
 Take both before each app migration.
+
+> Trap: the LXD pool `oute-pool` is `dir`, so `lxc snapshot` of this running LXC copies the whole rootfs and freezes it for the
+> duration (minutes). Interrupting it leaves the LXC `FROZEN` (`lxc start oute-supabase-db` thaws it). Prefer `pg_dump` for data;
+> take an LXC snapshot only on purpose, and let it finish (run it detached, not under a short timeout).
