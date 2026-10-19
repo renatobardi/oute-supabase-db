@@ -1,9 +1,22 @@
 # oute-supabase-db
 
-Variante própria do [supabase/supabase](https://github.com/supabase/supabase), Apache-2.0 (ver `LICENSE`).
-Snapshot único da `master` do upstream, sem histórico; não é fork. Origem exata em `UPSTREAM.md`.
+Own variant of [supabase/supabase](https://github.com/supabase/supabase) (Apache-2.0, see `LICENSE`).
+Single snapshot of upstream `master`, no history, not a fork. Exact origin in `UPSTREAM.md`.
 
-Uso: stack Supabase self-hosted dos projetos Oute (hanko, frentes-engenharia, financial-control),
-em LXC próprio no `oute-server`. Companheiro do [oute-surreal-db](https://github.com/renatobardi/oute-surreal-db).
+Runs the self-hosted Supabase stack of the Oute projects (financial-control, frentes-engenharia, hanko) in its own LXC on
+`oute-server`, one database per project. Companion of [oute-surreal-db](https://github.com/renatobardi/oute-surreal-db).
 
-Plano e decisões: `SUMMARY.md`.
+**This repo is the source of truth** for the deployment: if the server diverges, the server is wrong (or this repo needs a PR).
+
+| I need to… | Go to |
+|---|---|
+| Understand the design | [`docs/DESIGN.md`](docs/DESIGN.md) |
+| Operate (provision, connect an app, add project/client, rotate, dump) | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
+| Current state / memory between sessions | [`SUMMARY.md`](SUMMARY.md) |
+
+| Path | Role |
+|---|---|
+| `docker/` | Upstream self-host stack + `docker-compose.oute.yml` (direct Postgres) + `utils/init-projects.sh` |
+| `ops/provision_lxc.sh` | Runs on the Mac: creates/updates the LXC, firewall, stack, init, verifies isolation. `--check` is read-only |
+| `ops/admin_tunnel.sh` | Runs on the Mac: Studio on `localhost:8000`, Postgres on `localhost:5433` |
+| everything else | Upstream monorepo snapshot, untouched |

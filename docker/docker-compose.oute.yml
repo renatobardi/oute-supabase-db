@@ -1,0 +1,8 @@
+# Oute override: publishes Postgres directly so each project reaches its own
+# database (the pooler tenant only routes to POSTGRES_DB).
+# Enabled via COMPOSE_FILE in .env (see .env.example).
+
+services:
+  db:
+    ports:
+      - ${PG_DIRECT_PORT:-5433}:${POSTGRES_PORT}
