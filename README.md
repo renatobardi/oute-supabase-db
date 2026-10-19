@@ -4,7 +4,7 @@ Own variant of [supabase/supabase](https://github.com/supabase/supabase) (Apache
 Single snapshot of upstream `master`, no history, not a fork. Exact origin in `UPSTREAM.md`.
 
 Runs the self-hosted Supabase stack of the Oute projects (financial-control, frentes-engenharia, hanko) in its own LXC on
-`oute-server`, one database per project. Companion of [oute-surreal-db](https://github.com/renatobardi/oute-surreal-db).
+`oute-server`, one schema per project in `postgres`. Companion of [oute-surreal-db](https://github.com/renatobardi/oute-surreal-db).
 
 **This repo is the source of truth** for the deployment: if the server diverges, the server is wrong (or this repo needs a PR).
 
