@@ -13,8 +13,10 @@
 # Isolation: nft firewall INSIDE the LXC (own table; only the listed clients reach the DB/API ports).
 # Needed because Docker containers on the HOST reach LXC IPs (measured 2026-10-18); they arrive masqueraded
 # as the lxdbr0 IP (10.173.117.1), which is not on the list. Same design as oute-surreal-db.
-# Admin access (Studio, psql) goes through LXD proxy devices bound to the HOST loopback + ssh tunnel
-# (ops/admin_tunnel.sh); never through the lxdbr0 IP.
+# Exception: the host (HOST_GW_IP, where nginx comes from) may reach :8000 only, so db-console.oute.pro
+# (host nginx vhost, tailnet only, see renatobardi/lab#286) can proxy to the gateway. Host Docker containers
+# share that source IP and can reach :8000 too (login/API keys still required); tracked in lab#285.
+# Postgres ports stay closed to the host. Studio/psql from the Mac also work via ops/admin_tunnel.sh.
 # Secrets: generated inside the LXC (.env, 600), shown ONCE at the end; save them in the vault.
 
 set -euo pipefail
@@ -28,10 +30,12 @@ LXC_MEM="${LXC_MEM:-6GiB}"
 CLIENTS="${PG_CLIENT_IPS:-10.173.117.42 10.173.117.41 10.173.117.43}"
 POS_LXC="${POS_LXC:-financial-control-prd}"   # must reach
 NEG_LXC="${NEG_LXC:-vaultwarden}"             # must NOT reach (not on the list)
-PORTS="5432, 5433, 6543, 8000"                # pooler session, direct pg, pooler transaction, API gateway
+DB_PORTS="5432, 5433, 6543"                   # pooler session, direct pg, pooler transaction
+GW_PORT=8000                                  # API gateway (Studio at /)
+HOST_GW_IP="${HOST_GW_IP:-10.173.117.1}"      # lxdbr0 address of the host (nginx, host Docker masquerade)
 TEST_PORT=5433
 REMOTE_DIR=/opt/oute-supabase-db
-PUBLIC_URL="http://localhost:8000"            # reached via ssh tunnel; change when exposing
+PUBLIC_URL="${PUBLIC_URL:-https://db-console.oute.pro}"   # host nginx vhost, tailnet only
 
 CHECK_ONLY=0
 [ "${1:-}" = "--check" ] && CHECK_ONLY=1
@@ -105,7 +109,7 @@ mkdir -p ${REMOTE_DIR}
 docker --version
 EOS
 
-echo ">> Firewall in the LXC (nft): only ${CLIENTS} -> ${PORTS}"
+echo ">> Firewall in the LXC (nft): only ${CLIENTS} -> ${DB_PORTS}, ${GW_PORT} (+ host ${HOST_GW_IP} on ${GW_PORT})"
 CLIENTS_CSV="$(echo "${CLIENTS}" | sed 's/ /, /g')"
 x <<EOS
 set -euo pipefail
@@ -121,7 +125,8 @@ delete table inet oute_pgdb
 table inet oute_pgdb {
   chain pgdb_forward {
     type filter hook forward priority -10; policy accept;
-    iifname "eth0" tcp dport { ${PORTS} } ip saddr != { ${CLIENTS_CSV} } counter drop
+    iifname "eth0" tcp dport { ${DB_PORTS} } ip saddr != { ${CLIENTS_CSV} } counter drop
+    iifname "eth0" tcp dport ${GW_PORT} ip saddr != { ${CLIENTS_CSV}, ${HOST_GW_IP} } counter drop
   }
 }
 NFT
@@ -153,6 +158,14 @@ fi
 EOS
 )"
 case "${FIRST_ENV_OUT}" in NEW*) ok ".env created (600) with new secrets";; *) ok ".env already existed (kept)";; esac
+# Converge the public URL on an existing .env (compose up below recreates what changed)
+x <<EOS
+set -euo pipefail
+cd ${REMOTE_DIR}/docker
+sed -i -e "s|^SUPABASE_PUBLIC_URL=.*|SUPABASE_PUBLIC_URL=${PUBLIC_URL}|" \\
+       -e "s|^API_EXTERNAL_URL=.*|API_EXTERNAL_URL=${PUBLIC_URL}/auth/v1|" .env
+EOS
+ok "public URL ${PUBLIC_URL}"
 
 echo ">> Compose up (pulls images; may take several minutes)"
 x <<EOS
@@ -174,11 +187,17 @@ echo "------------------------------------------------------------------"
 
 echo ">> Isolation check"
 FAIL=0
-reach() { # <lxc> -> REACHES|BLOCKED
-  r "lxc exec $1 -- timeout 5 bash -c 'exec 3<>/dev/tcp/${IP}/${TEST_PORT}'" </dev/null >/dev/null 2>&1 && echo REACHES || echo BLOCKED
+reach_port() { # <lxc> <port> -> REACHES|BLOCKED
+  r "lxc exec $1 -- timeout 5 bash -c 'exec 3<>/dev/tcp/${IP}/$2'" </dev/null >/dev/null 2>&1 && echo REACHES || echo BLOCKED
 }
+reach() { reach_port "$1" "${TEST_PORT}"; }
 res="$(reach "${POS_LXC}")"; [ "${res}" = REACHES ] && ok "${POS_LXC} -> ${IP}:${TEST_PORT}: reaches (expected)" || { warn "${POS_LXC} does NOT reach (expected to reach)"; FAIL=1; }
 res="$(reach "${NEG_LXC}")"; [ "${res}" = BLOCKED ] && ok "${NEG_LXC} (not listed): blocked (expected)" || { warn "${NEG_LXC} REACHES the database (expected blocked)"; FAIL=1; }
+res="$(reach_port "${NEG_LXC}" "${GW_PORT}")"; [ "${res}" = BLOCKED ] && ok "${NEG_LXC} (not listed) -> :${GW_PORT}: blocked (expected)" || { warn "${NEG_LXC} REACHES :${GW_PORT} (expected blocked)"; FAIL=1; }
+code="$(r "curl -s -o /dev/null -w '%{http_code}' --max-time 8 http://${IP}:${GW_PORT}/auth/v1/.well-known/jwks.json" </dev/null || true)"
+[ "${code}" = 200 ] && ok "host (nginx path) -> ${IP}:${GW_PORT}: ${code} (expected)" || { warn "host cannot reach the gateway on :${GW_PORT} (got ${code})"; FAIL=1; }
+code="$(r "curl -s -o /dev/null -w '%{http_code}' --max-time 8 http://${IP}:${GW_PORT}/" </dev/null || true)"
+ok "host -> :${GW_PORT}/ without login: ${code} (401 expected: dashboard login required)"
 for net in bridge oute-agent_oute; do
   res="$(r "docker run --rm --network ${net} alpine sh -c 'nc -z -w 4 ${IP} ${TEST_PORT} && echo REACHES || echo BLOCKED' 2>/dev/null | tail -1")"
   [ "${res}" = BLOCKED ] && ok "host Docker container (network ${net}): blocked (expected)" || { warn "host Docker container (network ${net}) REACHES the database"; FAIL=1; }
