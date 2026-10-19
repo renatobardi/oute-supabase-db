@@ -71,7 +71,7 @@ provision script (postgres, dashboard) and by `init-projects.sh` (project roles)
 1. Start from a **snapshot of upstream `master`** (no history, not a fork) to keep all Supabase capabilities.
 2. LXC per stack; full stack on; schema per project in `postgres`; direct Postgres access; Studio at `db-console.oute.pro` (tailnet only), tunnel as fallback.
 3. Migrations of each app are tracked as issues **in each app's repo**, not here.
-4. Backup: LXC snapshot for now; policy and `pg_dump` later (open).
+4. Backup: lab restic `pg_dump` of `postgres` (owners kept) + `db-config` volume + storage + functions + `.env` copy; restore tested 2026-10-19 (OPERATIONS §8).
 
 ## Risks
 | Risk | Mitigation |
