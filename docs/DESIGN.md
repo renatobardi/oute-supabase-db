@@ -50,9 +50,9 @@ Same finding as oute-surreal-db: host Docker containers reach LXC IPs; LXD ACL i
 - nft table `inet oute_pgdb` (hook forward) inside the LXC: only client LXC IPs reach ports `5432, 5433, 6543` and `8000`.
 - Clients today: `10.173.117.42` (financial-control-prd), `.41` (frentes-engenharia-prd), `.43` (hanko-prd).
 - **Exception:** the host (`10.173.117.1`) may reach `8000` only, so the host nginx can publish Studio. Postgres ports stay closed to it.
-  Host Docker containers are masqueraded as the same IP, so they can also reach the gateway on `8000` (dashboard login and API keys
-  are still required; they cannot reach any project database). Tracked for a uniform fix in renatobardi/lab#285.
-- `provision_lxc.sh` tests on every run: clients reach 5433; vaultwarden is blocked on 5433 and 8000; host Docker networks are blocked on 5433;
+  Host Docker containers share that source IP, but the **host forward rule** (renatobardi/lab ADR 0006, `table inet oute_isolation`,
+  applied 2026-10-19) drops their traffic towards `lxdbr0`, so they cannot use the exception. The host's own processes (nginx) are unaffected.
+- `provision_lxc.sh` tests on every run: clients reach 5433; vaultwarden is blocked on 5433 and 8000; host Docker networks are blocked on 5433 and 8000;
   the host reaches the gateway; exit 2 if anything leaks.
 
 ## Access

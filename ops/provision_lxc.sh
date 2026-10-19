@@ -15,8 +15,9 @@
 # as the lxdbr0 IP (10.173.117.1), which is not on the list. Same design as oute-surreal-db.
 # Exception: the host (HOST_GW_IP, where nginx comes from) may reach :8000 only, so db-console.oute.pro
 # (host nginx vhost, tailnet only, see renatobardi/lab#286) can proxy to the gateway. Host Docker containers
-# share that source IP and can reach :8000 too (login/API keys still required); tracked in lab#285.
-# Postgres ports stay closed to the host. Studio/psql from the Mac also work via ops/admin_tunnel.sh.
+# share that source IP, but the host forward rule (lab ADR 0006, table oute_isolation) drops their traffic
+# towards lxdbr0, so they cannot use this exception. Postgres ports stay closed to the host.
+# Studio/psql from the Mac also work via ops/admin_tunnel.sh.
 # Secrets: generated inside the LXC (.env, 600), shown ONCE at the end; save them in the vault.
 
 set -euo pipefail
@@ -210,8 +211,10 @@ code="$(r "curl -s -o /dev/null -w '%{http_code}' --max-time 8 http://${IP}:${GW
 code="$(r "curl -s -o /dev/null -w '%{http_code}' --max-time 8 http://${IP}:${GW_PORT}/" </dev/null || true)"
 ok "host -> :${GW_PORT}/ without login: ${code} (401 expected: dashboard login required)"
 for net in bridge oute-agent_oute; do
-  res="$(r "docker run --rm --network ${net} alpine sh -c 'nc -z -w 4 ${IP} ${TEST_PORT} && echo REACHES || echo BLOCKED' 2>/dev/null | tail -1")"
-  [ "${res}" = BLOCKED ] && ok "host Docker container (network ${net}): blocked (expected)" || { warn "host Docker container (network ${net}) REACHES the database"; FAIL=1; }
+  for port in ${TEST_PORT} ${GW_PORT}; do
+    res="$(r "docker run --rm --network ${net} alpine sh -c 'nc -z -w 4 ${IP} ${port} && echo REACHES || echo BLOCKED' 2>/dev/null | tail -1")"
+    [ "${res}" = BLOCKED ] && ok "host Docker container (network ${net}) -> :${port}: blocked (expected)" || { warn "host Docker container (network ${net}) REACHES :${port} (host forward rule missing? lab ADR 0006)"; FAIL=1; }
+  done
 done
 
 echo
