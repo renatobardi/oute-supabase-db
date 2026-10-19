@@ -35,6 +35,7 @@ GW_PORT=8000                                  # API gateway (Studio at /)
 HOST_GW_IP="${HOST_GW_IP:-10.173.117.1}"      # lxdbr0 address of the host (nginx, host Docker masquerade)
 TEST_PORT=5433
 REMOTE_DIR=/opt/oute-supabase-db
+BACKUP_DIR=/var/backups/oute-supabase-db         # holds a copy of .env for the lab backup
 PUBLIC_URL="${PUBLIC_URL:-https://db-console.oute.pro}"   # host nginx vhost, tailnet only
 
 CHECK_ONLY=0
@@ -166,6 +167,16 @@ sed -i -e "s|^SUPABASE_PUBLIC_URL=.*|SUPABASE_PUBLIC_URL=${PUBLIC_URL}|" \\
        -e "s|^API_EXTERNAL_URL=.*|API_EXTERNAL_URL=${PUBLIC_URL}/auth/v1|" .env
 EOS
 ok "public URL ${PUBLIC_URL}"
+# Backup prerequisites (the lab backup reads these, see docs/OPERATIONS.md): POSTGRES_USER for pg_dump,
+# and a copy of .env (secrets live only there) in a dir the backup picks up. Refreshed on every run.
+x <<EOS
+set -euo pipefail
+cd ${REMOTE_DIR}/docker
+grep -q '^POSTGRES_USER=' .env || printf '\nPOSTGRES_USER=supabase_admin\n' >> .env
+install -d -m 700 ${BACKUP_DIR}
+install -m 600 .env ${BACKUP_DIR}/env
+EOS
+ok ".env copy for backup in ${BACKUP_DIR}"
 
 echo ">> Compose up (pulls images; may take several minutes)"
 x <<EOS

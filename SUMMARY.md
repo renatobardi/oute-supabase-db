@@ -18,7 +18,7 @@ Out of scope: oute-agent (ADR-08), vaultwarden (isolated SQLite), studio (discon
 - Pilots: financial-control → frentes-engenharia → hanko (only `HANKO_DATABASE_URL`).
 
 ## Open
-- Backup policy (LXC snapshot now; `pg_dump` schedule later).
+- Backup schedule review in ~10 days (the lab weekly/monthly timers apply once the inventory entry is deployed).
 - RAM check of the full stack after first boot (LXC limit 6 GiB; logs override can be dropped).
 
 ## Phases

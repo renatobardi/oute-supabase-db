@@ -45,12 +45,34 @@ otherwise the connection times out and the nft drop counter rises.
 Rotate a project: same command with `--rotate <project>`; update the app and the vault.
 Postgres admin / dashboard password live only in the LXC `.env` and the vault.
 
-## 8. Snapshot and dump
+## 8. Backup and restore
+**What is backed up** (lab `backup-all.sh`, restic, `strategy: pg_dump`, inventory entry `oute-supabase-db`):
+- `pg_dump -Fc` of database `postgres` **keeping owners and grants** (`pg_dump_args: ""`), run as `supabase_admin`: every project schema, Auth, Storage metadata.
+- Docker volume `supabase_db-config`: the **pgsodium root key**. Without it Vault secrets in Postgres are unrecoverable.
+- `volumes/storage` (uploaded files) and `volumes/functions`.
+- `/var/backups/oute-supabase-db`: a copy of `.env` (JWT secret, encryption keys), refreshed by every `./ops/provision_lxc.sh` run.
+  After editing the LXC `.env` by hand, re-run the provision (or copy it) so the backup sees the change.
+
+This matches what Supabase documents for self-hosting: no automatic backup is shipped; the guide asks for `pg_dump`/`pg_dumpall` plus
+the `db-config` volume (pgsodium key) and the storage files. The hosted platform's physical backup + WAL (PITR) is not part of self-host.
+
+**Before a migration:** `pg_dump` of the schema (below), plus an LXC snapshot only if you really want one.
 ```sh
-ssh oute-server 'lxc snapshot oute-supabase-db <name>'
 ssh oute-server 'lxc exec oute-supabase-db -- docker exec supabase-db pg_dump -U supabase_admin -Fc -n <schema> postgres' > <schema>.dump
 ```
-Take both before each app migration.
+
+**Restore test (done 2026-10-19, repeat after changes to the backup):** dump with owners/grants, restore into a scratch database, check a canary row,
+its owner and the read-only grant, drop the scratch database:
+```sh
+docker exec -i supabase-db pg_dump -U supabase_admin -Fc postgres > x.dump
+docker exec supabase-db psql -U supabase_admin -d postgres -c "CREATE DATABASE restore_test TEMPLATE template0"
+docker exec -i supabase-db pg_restore -U supabase_admin -d restore_test --no-comments < x.dump
+# verify, then: DROP DATABASE restore_test
+```
+Result: `pg_restore` rc 0, 0 errors, canary row present, owner `app_<schema>` kept, `ro_<schema>` SELECT kept, all schemas present.
+
+**Disaster recovery (new LXC):** run the provision, stop the stack, restore `db-config` and `.env` first, start `db`, then `pg_restore --clean --if-exists -d postgres`
+from the restic dump, then bring the rest up. Role passwords are in the dump's owners/grants only by name: rotate with `init-projects.sh --rotate`.
 
 > Trap: the LXD pool `oute-pool` is `dir`, so `lxc snapshot` of this running LXC copies the whole rootfs and freezes it for the
 > duration (minutes). Interrupting it leaves the LXC `FROZEN` (`lxc start oute-supabase-db` thaws it). Prefer `pg_dump` for data;
