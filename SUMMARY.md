@@ -16,6 +16,7 @@ Out of scope: oute-agent (ADR-08), vaultwarden (isolated SQLite), studio (discon
 - Details, isolation and conventions: `docs/DESIGN.md`. Runbooks: `docs/OPERATIONS.md`.
 - App migrations (SQLite → Postgres) are issues **in each app's repo**, written after the server is up and after reading each app's code.
 - Pilots: financial-control → frentes-engenharia → hanko (only `HANKO_DATABASE_URL`).
+- **Pilot 1 done (2026-10-24):** financial-control runs on schema `financial_control_prd` (renatobardi/financial-control#68, ADR-0004 there). Cutover tested by the owner, SQLite and its restic snapshots removed. Lessons for the next two: money columns must be `BIGINT`; a constraint violation aborts the transaction, so catch sites roll back; rehearse the data copy on a consistent copy of the real database (it found a bug the unit tests did not); the app's `.env` gets the role URL from the vault through the lab's secrets helper before the deploy.
 
 ## Open
 - Backup schedule review in ~10 days (the lab weekly/monthly timers apply once the inventory entry is deployed).
@@ -25,5 +26,5 @@ Out of scope: oute-agent (ADR-08), vaultwarden (isolated SQLite), studio (discon
 1. Repo from upstream snapshot ✔
 2. Provisioning code + docs (`ops/`, `docker/utils/init-projects.sh`, `docs/`) — branch `feat/provision-lxc`
 3. Apply on the server (LXC `10.173.117.51`), verify isolation, snapshot
-4. Issues in each app's repo (code read first)
-5. Pilot migrations, then backup policy
+4. Issues in each app's repo (code read first): financial-control ✔ (#68), frentes-engenharia and hanko pending
+5. Pilot migrations (financial-control ✔), then backup policy
