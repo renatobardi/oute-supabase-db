@@ -17,6 +17,7 @@ Out of scope: oute-agent (ADR-08), vaultwarden (isolated SQLite), studio (discon
 - App migrations (SQLite → Postgres) are issues **in each app's repo**, written after the server is up and after reading each app's code.
 - Pilots: financial-control → frentes-engenharia → hanko (only `HANKO_DATABASE_URL`).
 - **Pilot 1 done (2026-10-24):** financial-control runs on schema `financial_control_prd` (renatobardi/financial-control#68, ADR-0004 there). Cutover tested by the owner, SQLite and its restic snapshots removed. Lessons for the next two: money columns must be `BIGINT`; a constraint violation aborts the transaction, so catch sites roll back; rehearse the data copy on a consistent copy of the real database (it found a bug the unit tests did not); the app's `.env` gets the role URL from the vault through the lab's secrets helper before the deploy.
+- **Pilot 2 done (2026-10-25):** frentes-engenharia runs on schema `frentes_engenharia_prd` (renatobardi/frentes-engenharia#162, ADR-0002 there). 19,107 rows copied and compared one by one, cutover tested by the owner, SQLite volume removed. New lesson: this server returns `double precision` with 15 digits (`extra_float_digits` below 3), so a rehearsal against the real database flagged diffs the local Postgres never showed; clients should ask for `extra_float_digits=3`. The app role password was rotated once (shown once, saved to the vault).
 
 ## Open
 - Backup schedule review in ~10 days (the lab weekly/monthly timers apply once the inventory entry is deployed).
