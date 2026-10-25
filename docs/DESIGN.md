@@ -9,9 +9,9 @@ same house pattern: one LXC per stack on `oute-server`, firewall inside the LXC,
 
 | Project | Today | Plan |
 |---|---|---|
-| financial-control | SQLite (1.4 MB) | pilot 1: own schema |
-| frentes-engenharia | SQLite (123 MB) | pilot 2: own schema |
-| hanko | Postgres 17 own container (~1.1 GB) | pilot 3: own schema, only `HANKO_DATABASE_URL` changes |
+| financial-control | schema `financial_control_prd` (was SQLite) | **migrated** (pilot 1, 2026-10-24) |
+| frentes-engenharia | schema `frentes_engenharia_prd` (was SQLite) | **migrated** (pilot 2, 2026-10-25) |
+| hanko | Postgres 17 own container (~1.1 GB) | pilot 3, on hold: own schema, only `HANKO_DATABASE_URL` changes |
 | kubo, obo | → oute-surreal-db | out |
 | oute-agent, vaultwarden, studio | out | out (ADR-08 / isolated vault / discontinued Oute project) |
 
@@ -39,7 +39,7 @@ Realtime) just uses it; none of the three current apps needs it yet.
 | Access | Apps connect to database `postgres` as their `app_<schema>` role: directly on `10.173.117.51:5433`, or through the pooler (5432 session, 6543 transaction) |
 | REST/Realtime | `PGRST_DB_SCHEMAS` stays `public,graphql_public`: a project schema is **not** exposed over REST until that project opts in (add the schema and grants for `anon`/`authenticated`) |
 | `auth.users` | Shared by every project that uses Supabase Auth (accepted: the stack is one shared platform) |
-| Env vars in apps | `DATABASE_URL=postgresql://app_<schema>:<pass>@10.173.117.51:5433/postgres` (hanko: `HANKO_DATABASE_URL`) |
+| Env vars in apps | `DATABASE_URL=postgresql://app_<schema>:<pass>@10.173.117.51:5433/postgres` (financial-control: `FINANCEIRO_DATABASE_URL`, frentes-engenharia: `EVENTOS_DATABASE_URL`, hanko: `HANKO_DATABASE_URL`) |
 | Vault | `oute-supabase-db/postgres`, `oute-supabase-db/dashboard`, `oute-supabase-db/<schema>/<role>` |
 
 History: the first cut used one database per project. It was dropped (2026-10-19) because Studio only manages `postgres`, which left the
@@ -72,6 +72,21 @@ provision script (postgres, dashboard) and by `init-projects.sh` (project roles)
 2. LXC per stack; full stack on; schema per project in `postgres`; direct Postgres access; Studio at `db-console.oute.pro` (tailnet only), tunnel as fallback.
 3. Migrations of each app are tracked as issues **in each app's repo**, not here.
 4. Backup: lab restic `pg_dump` of `postgres` (owners kept) + `db-config` volume + storage + functions + `.env` copy; restore tested 2026-10-19 (OPERATIONS §8).
+
+## Client conventions (lessons from the pilots)
+What the two migrations taught; read before migrating the next app.
+
+| Topic | Rule |
+|---|---|
+| Integers | Use `BIGINT` for money, counters and tokens. Postgres `INTEGER` has 32 bits (SQLite integers have 64); a value above 2^31 fails |
+| Doubles | This server returns `double precision` with 15 digits, so a value like `0.18999999999999997` reads back as `0.19`. Clients that need the exact value set `extra_float_digits=3` on the connection (frentes-engenharia does, in every connection's options) |
+| Failed statements | A constraint violation aborts the whole transaction. Roll back at every site that catches the error, or use autocommit with explicit `transaction()` blocks |
+| Sums | `SUM` of integers returns `numeric`; convert to the type the app expects |
+| Case-insensitive match | No `NOCASE`: use `lower(col)` or `ILIKE` |
+| Row order | Without an `ORDER BY` there is no order. Where SQLite's `rowid` meant arrival order, add an identity column |
+| Tests | Run them against a real Postgres of the same major version (17), one disposable schema per test; in-memory SQLite hides these differences |
+| Rehearse | Copy the data on a consistent copy of the real database (`sqlite3.backup`) before the cutover and compare row by row. Both rehearsals caught defects the unit tests missed (a composite foreign key in pilot 1, the 15-digit doubles in pilot 2) |
+| Cutover | Same session, no retention: copy, swap the container, the owner tests, then remove the old volume and the copy script |
 
 ## Risks
 | Risk | Mitigation |

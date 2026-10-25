@@ -42,8 +42,15 @@ otherwise the connection times out and the nft drop counter rises.
    (creates only what is missing; new passwords printed once).
 
 ## 7. Credentials
-Rotate a project: same command with `--rotate <project>`; update the app and the vault.
+Rotate a project: same command with `--rotate <project>`; update the app and the vault. This rotates **both** `app_<schema>` and
+`ro_<schema>` of that project; the new passwords are printed once.
 Postgres admin / dashboard password live only in the LXC `.env` and the vault.
+
+To hand a rotated URL to the vault without it passing through a chat or a log, run the rotation from a small local script (under the
+git-ignored `scripts/ops/`) that parses the `schema=... user=... pass=...` line, builds
+`postgresql://app_<schema>:<pass>@10.173.117.51:5433/postgres` and puts it on the clipboard (or shows it only on your own terminal and
+clears the screen). Save it as a Login in Vaultwarden named `<app-lxc> <ENV_VAR>` with the URL in the password field; the lab's
+secrets helper for the app then writes it into the app's `.env`. Check the item name for stray spaces: the helper matches it exactly.
 
 ## 8. Backup and restore
 **What is backed up** (lab `backup-all.sh`, restic, `strategy: pg_dump`, inventory entry `oute-supabase-db`):

@@ -20,12 +20,14 @@ Out of scope: oute-agent (ADR-08), vaultwarden (isolated SQLite), studio (discon
 - **Pilot 2 done (2026-10-25):** frentes-engenharia runs on schema `frentes_engenharia_prd` (renatobardi/frentes-engenharia#162, ADR-0002 there). 19,107 rows copied and compared one by one, cutover tested by the owner, SQLite volume removed. New lesson: this server returns `double precision` with 15 digits (`extra_float_digits` below 3), so a rehearsal against the real database flagged diffs the local Postgres never showed; clients should ask for `extra_float_digits=3`. The app role password was rotated once (shown once, saved to the vault).
 
 ## Open
-- Backup schedule review in ~10 days (the lab weekly/monthly timers apply once the inventory entry is deployed).
-- RAM check of the full stack after first boot (LXC limit 6 GiB; logs override can be dropped).
+- **hanko** (pilot 3) is on hold at the owner's request; schema `hanko_prd` and its roles exist, no app uses them yet.
+- Both migrated apps are covered by the weekly lab dump of `oute-supabase-db` (Saturdays 02:00 UTC); their own inventory entries are `backup: none` with a note pointing here.
+- RAM check of the full stack under real load (LXC limit 6 GiB; logs override can be dropped).
 
 ## Phases
 1. Repo from upstream snapshot ✔
-2. Provisioning code + docs (`ops/`, `docker/utils/init-projects.sh`, `docs/`) — branch `feat/provision-lxc`
-3. Apply on the server (LXC `10.173.117.51`), verify isolation, snapshot
-4. Issues in each app's repo (code read first): financial-control ✔ (#68), frentes-engenharia and hanko pending
-5. Pilot migrations (financial-control ✔), then backup policy
+2. Provisioning code + docs (`ops/`, `docker/utils/init-projects.sh`, `docs/`) ✔
+3. Apply on the server (LXC `10.173.117.51`), verify isolation ✔
+4. Issues in each app's repo (code read first): financial-control ✔ (#68), frentes-engenharia ✔ (#162), hanko pending
+5. Pilot migrations: financial-control ✔, frentes-engenharia ✔, hanko on hold. Backup policy ✔ (lab restic, restore tested)
+6. Client conventions from the pilots: `docs/DESIGN.md`, "Client conventions"
