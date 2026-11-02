@@ -20,6 +20,7 @@ Out of scope: oute-agent (ADR-08), vaultwarden (isolated SQLite), studio (discon
 - **Pilot 2 done (2026-10-25):** frentes-engenharia runs on schema `frentes_engenharia_prd` (renatobardi/frentes-engenharia#162, ADR-0002 there). 19,107 rows copied and compared one by one, cutover tested by the owner, SQLite volume removed. New lesson: this server returns `double precision` with 15 digits (`extra_float_digits` below 3), so a rehearsal against the real database flagged diffs the local Postgres never showed; clients should ask for `extra_float_digits=3`. The app role password was rotated once (shown once, saved to the vault).
 
 ## Open
+- **backstage** (2026-11-02): multi-schema tenant `backstage:prd` (role `app_backstage_prd`, `CREATE` on `postgres`) and client `.44` in the allowlist. Apply: add `PG_MULTISCHEMA` to the LXC `.env`, run `./ops/provision_lxc.sh`, save the printed password as `backstage-prd POSTGRES_PASSWORD` in the vault.
 - **hanko** (pilot 3) is on hold at the owner's request; schema `hanko_prd` and its roles exist, no app uses them yet.
 - Both migrated apps are covered by the weekly lab dump of `oute-supabase-db` (Saturdays 02:00 UTC); their own inventory entries are `backup: none` with a note pointing here.
 - RAM check of the full stack under real load (LXC limit 6 GiB; logs override can be dropped).
