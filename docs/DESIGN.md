@@ -12,6 +12,7 @@ same house pattern: one LXC per stack on `oute-server`, firewall inside the LXC,
 | financial-control | schema `financial_control_prd` (was SQLite) | **migrated** (pilot 1, 2026-10-24) |
 | frentes-engenharia | schema `frentes_engenharia_prd` (was SQLite) | **migrated** (pilot 2, 2026-10-25) |
 | hanko | Postgres 17 own container (~1.1 GB) | pilot 3, on hold: own schema, only `HANKO_DATABASE_URL` changes |
+| backstage | schemas `backstage_<plugin>` (multi-schema tenant) | provisioned 2026-11; app data rebuilds from git (oute-infra-ops ADR-0010) |
 | kubo, obo | → oute-surreal-db | out |
 | oute-agent, vaultwarden, studio | out | out (ADR-08 / isolated vault / discontinued Oute project) |
 
@@ -34,6 +35,7 @@ Realtime) just uses it; none of the three current apps needs it yet.
 |---|---|
 | Schema | `<project with _>_<env>` e.g. `financial_control_prd`. Only existing envs (`PG_PROJECTS` in `.env`) |
 | Roles | `app_<schema>` owns the schema; `ro_<schema>` SELECT only (backup, queries). No superuser/createdb; `search_path` fixed to the schema |
+| Multi-schema tenant | `PG_MULTISCHEMA` (`project:env`): one role `app_<project>_<env>` with `CONNECT, CREATE` on database `postgres` and no pre-created schema; the app creates and owns its schemas (Backstage: `pluginDivisionMode: schema`, `schemaPrefix: backstage_`). No `ro_` role. Same isolation (tested: cannot read other tenants or write `public`); the only extra power is creating new schemas |
 | Isolation | A role has no privilege on any other project schema, on `public`, or on Supabase schemas (`auth`, `storage`, `vault`...). It sees catalog metadata only (tested) |
 | Studio | Connects as role `postgres`, which is a member of every `app_<schema>`, so it sees and edits all project schemas |
 | Access | Apps connect to database `postgres` as their `app_<schema>` role: directly on `10.173.117.51:5433`, or through the pooler (5432 session, 6543 transaction) |
@@ -48,7 +50,7 @@ published console blind to the project data; the roles and their passwords were 
 ## Network isolation
 Same finding as oute-surreal-db: host Docker containers reach LXC IPs; LXD ACL is unavailable on bridge NICs.
 - nft table `inet oute_pgdb` (hook forward) inside the LXC: only client LXC IPs reach ports `5432, 5433, 6543` and `8000`.
-- Clients today: `10.173.117.42` (financial-control-prd), `.41` (frentes-engenharia-prd), `.43` (hanko-prd).
+- Clients today: `10.173.117.42` (financial-control-prd), `.41` (frentes-engenharia-prd), `.43` (hanko-prd), `.44` (backstage-prd).
 - **Exception:** the host (`10.173.117.1`) may reach `8000` only, so the host nginx can publish Studio. Postgres ports stay closed to it.
   Host Docker containers share that source IP, but the **host forward rule** (renatobardi/lab ADR 0006, `table inet oute_isolation`,
   applied 2026-10-19) drops their traffic towards `lxdbr0`, so they cannot use the exception. The host's own processes (nginx) are unaffected.

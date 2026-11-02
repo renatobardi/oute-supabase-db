@@ -27,8 +27,8 @@ NAME="${LXC_NAME:-oute-supabase-db}"
 IP="${LXC_IP:-10.173.117.51}"
 LXC_CPU="${LXC_CPU:-3}"
 LXC_MEM="${LXC_MEM:-6GiB}"
-# Authorized clients (project LXC IPs): financial-control-prd, frentes-engenharia-prd, hanko-prd.
-CLIENTS="${PG_CLIENT_IPS:-10.173.117.42 10.173.117.41 10.173.117.43}"
+# Authorized clients (project LXC IPs): financial-control-prd, frentes-engenharia-prd, hanko-prd, backstage-prd.
+CLIENTS="${PG_CLIENT_IPS:-10.173.117.42 10.173.117.41 10.173.117.43 10.173.117.44}"
 POS_LXC="${POS_LXC:-financial-control-prd}"   # must reach
 NEG_LXC="${NEG_LXC:-vaultwarden}"             # must NOT reach (not on the list)
 DB_PORTS="5432, 5433, 6543"                   # pooler session, direct pg, pooler transaction
