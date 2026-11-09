@@ -84,3 +84,15 @@ from the restic dump, then bring the rest up. Role passwords are in the dump's o
 > Trap: the LXD pool `oute-pool` is `dir`, so `lxc snapshot` of this running LXC copies the whole rootfs and freezes it for the
 > duration (minutes). Interrupting it leaves the LXC `FROZEN` (`lxc start oute-supabase-db` thaws it). Prefer `pg_dump` for data;
 > take an LXC snapshot only on purpose, and let it finish (run it detached, not under a short timeout).
+
+## 9. Move an app from its own Postgres into its schema
+`ops/migrate_pg_schema.sh` (Mac, through ssh; defaults are for hanko, env vars override: `SRC_LXC`, `SRC_CONTAINER`,
+`SRC_USER`, `SRC_DB`, `SRC_SCHEMA`, `SRC_APP_DIR`, `SRC_STOP_SERVICES`, `SCHEMA`).
+```sh
+./ops/migrate_pg_schema.sh rehearse   # scratch database migr_<schema>, exact row count per table on both sides, dropped at the end
+./ops/migrate_pg_schema.sh cutover    # target schema must be empty; stops the app, same copy, restores into postgres.<schema> as app_<schema>
+```
+The data goes source container → 0700 temp dir on the host → `supabase-db`; the source schema is renamed in the scratch
+database, dumped again and restored into `postgres` with `--role=app_<schema>` in one transaction, without the schema entry.
+Both modes abort on any count difference. After cutover the app stays stopped and its old database untouched (rollback =
+start it again); then put the app URL in its `.env` and in the vault (section 7) and deploy the app.
