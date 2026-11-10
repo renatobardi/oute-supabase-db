@@ -11,7 +11,7 @@ same house pattern: one LXC per stack on `oute-server`, firewall inside the LXC,
 |---|---|---|
 | financial-control | schema `financial_control_prd` (was SQLite) | **migrated** (pilot 1, 2026-10-24) |
 | frentes-engenharia | schema `frentes_engenharia_prd` (was SQLite) | **migrated** (pilot 2, 2026-10-25) |
-| hanko | Postgres 17 own container (~1.1 GB) | pilot 3, on hold: own schema, only `HANKO_DATABASE_URL` changes |
+| hanko | schema `hanko_prd` (was its own Postgres 17 container) | **migrated** (pilot 3, 2026-11-09) |
 | backstage | schemas `backstage_<plugin>` (multi-schema tenant) | provisioned 2026-11; app data rebuilds from git (oute-infra-ops ADR-0010) |
 | kubo, obo | → oute-surreal-db | out |
 | oute-agent, vaultwarden, studio | out | out (ADR-08 / isolated vault / discontinued Oute project) |
